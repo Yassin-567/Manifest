@@ -12,7 +12,7 @@ def get_dash_manifest_url(update, context):
     # Get the YouTube live stream URL from the message sent to the bot
     live_stream_url = update.message.text
 
-    # Create a yt_dlp instance and set the options to extract the formats
+    # Create a `yt_dlp` instance and set the options to extract the formats
     ydl_opts = {
         "format": "best",
         "forcejson": True,
@@ -79,5 +79,5 @@ def main():
     updater.start_polling()
     updater.idle()
 
-if name == "main":
+if __name__ == "__main__":
     main()
