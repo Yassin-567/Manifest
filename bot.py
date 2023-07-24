@@ -48,8 +48,12 @@ def get_dash_manifest_url(update, context):
     return QUALITY_SELECTION
 
 def handle_quality_selection(update, context):
-    # Get the user's selected quality level
-    selected_quality = update.callback_query.data
+    # Acknowledge the button press and get the callback data (selected quality format ID)
+    query = update.callback_query
+    query.answer()
+
+    # Get the selected quality format ID
+    selected_quality = query.data
 
     # Get the available quality buttons from the context
     quality_buttons = context.user_data.get("quality_buttons", [])
@@ -76,9 +80,9 @@ def handle_quality_selection(update, context):
             dash_manifest_url = info_dict.get("url")
 
         # Send the dash manifest URL back to the user
-        update.message.reply_text(f"Dash manifest URL ({selected_url}): {dash_manifest_url}")
+        query.message.reply_text(f"Dash manifest URL ({selected_url}): {dash_manifest_url}")
     else:
-        update.message.reply_text("Invalid quality selection. Please select a quality level from the list.")
+        query.message.reply_text("Invalid quality selection. Please select a quality level from the list.")
 
     # End the conversation
     return ConversationHandler.END
