@@ -1,5 +1,5 @@
 import telegram
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, InlineQueryHandler, InlineQueryResultArticle, InputTextMessageContent
 import yt_dlp
 
 # Replace this with your bot's token
@@ -8,11 +8,14 @@ bot_token = "5987250865:AAHjt2KwXxLXg-szVMmfnfWdG6UA1hcgmwI"
 # Define the states used in the conversation flow
 QUALITY_SELECTION = 0
 
+def start(update, context):
+    update.message.reply_text("Welcome! Please send me a YouTube link of any video or live stream.")
+
 def get_dash_manifest_url(update, context):
     # Get the YouTube live stream URL from the message sent to the bot
     live_stream_url = update.message.text
 
-    # Create a `yt_dlp` instance and set the options to extract the formats
+    # Create a yt_dlp instance and set the options to extract the formats
     ydl_opts = {
         "format": "best",
         "forcejson": True,
@@ -25,34 +28,29 @@ def get_dash_manifest_url(update, context):
         info_dict = ydl.extract_info(live_stream_url, download=False)
         formats = info_dict.get("formats")
 
-    # Prompt the user to select a quality level
+    # Prompt the user to select a quality level with inline commands
     quality_levels = [f"{format['height']}p" for format in formats if format.get('height')]
-    prompt = "Select a quality level:\n\n" + "\n".join([f"{i+1}. {level}" for i, level in enumerate(quality_levels)])
-    update.message.reply_text(prompt)
+    results = [InlineQueryResultArticle(id=str(i), title=level, input_message_content=InputTextMessageContent(live_stream_url)) for i, level in enumerate(quality_levels)]
+    update.message.reply_text("Select a quality level:", reply_markup=telegram.InlineKeyboardMarkup.from_column(results))
 
-    # Define a function to handle the user's response
-    def handle_quality_selection(update, context):
-        # Get the user's selected quality level
-        selected_index = int(update.message.text) - 1
-        selected_format = formats[selected_index]
+    # Return the QUALITY_SELECTION state
+    return QUALITY_SELECTION
 
-        # Extract the dash manifest URL for the selected format
-        ydl_opts["format"] = selected_format["format_id"]
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(live_stream_url, download=False)
-            dash_manifest_url = info_dict.get("url")
+def handle_quality_selection(update, context):
+    # Get the chosen quality level
+    selected_index = int(update.callback_query.data)
+    live_stream_url = update.callback_query.message.text
+    ydl_opts = {"format": f"{selected_index}+best", "forcejson": True}
 
-        # Send the dash manifest URL back to the user
-        update.message.reply_text(f"Dash manifest URL ({selected_format['height']}p): {dash_manifest_url}")
+    # Extract the dash manifest URL for the selected format
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(live_stream_url, download=False)
+        dash_manifest_url = info_dict.get("url")
 
-        # End the conversation
-        return ConversationHandler.END
+    # Send the dash manifest URL back to the user
+    update.callback_query.message.reply_text(f"Dash manifest URL ({dash_manifest_url}): {dash_manifest_url}")
 
-    # Add a message handler to listen for the user's response
-    selection_handler = MessageHandler(Filters.regex(r"^[1-9][0-9]*$"), handle_quality_selection)
-    context.dispatcher.add_handler(selection_handler)
-
-    # Return to the main event loop and wait for the user's response
+    # End the conversation
     return ConversationHandler.END
 
 def main():
@@ -64,16 +62,17 @@ def main():
 
     # Create a conversation handler to handle the quality selection flow
     quality_selection_handler = ConversationHandler(
-        entry_points=[MessageHandler(Filters.regex(r"(http(s)?://)?((w){3}.)?youtu(be|.be)?(\.com)?/.+"), get_dash_manifest_url)],
+        entry_points=[MessageHandler(Filters.text & ~Filters.command, get_dash_manifest_url)],
         states={
-            QUALITY_SELECTION: [MessageHandler(Filters.regex(r"^[1-9][0-9]*$"), get_dash_manifest_url)]
+            QUALITY_SELECTION: [CallbackQueryHandler(handle_quality_selection)]
         },
-        fallbacks=[],
-        allow_reentry=True
+        fallbacks=[]
     )
 
     # Add the quality selection handler to the updater
+    updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(quality_selection_handler)
+    updater.dispatcher.add_handler(InlineQueryHandler(get_dash_manifest_url))
 
     # Start the bot
     updater.start_polling()
