@@ -92,31 +92,27 @@ def inline_quality_selection(update, context):
 
     update.inline_query.answer(results)
 
-def main():
-    # Create an instance of the Telegram bot
-    bot = telegram.Bot(token=bot_token)
+# Create an instance of the Telegram bot
+bot = telegram.Bot(token=bot_token)
 
-    # Create an instance of the Telegram updater and attach the bot to it
-    updater = Updater(token=bot_token, use_context=True)
+# Create an instance of the Telegram updater and attach the bot to it
+updater = Updater(token=bot_token, use_context=True)
 
-    # Create a conversation handler to handle the quality selection flow
-    quality_selection_handler = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text & ~Filters.command, get_dash_manifest_url)],
-        states={
-            QUALITY_SELECTION: [MessageHandler(Filters.command, handle_quality_selection)]
-        },
-        fallbacks=[],
-        allow_reentry=True
-    )
+# Create a conversation handler to handle the quality selection flow
+quality_selection_handler = ConversationHandler(
+    entry_points=[MessageHandler(Filters.text & ~Filters.command, get_dash_manifest_url)],
+    states={
+        QUALITY_SELECTION: [MessageHandler(Filters.command, handle_quality_selection)]
+    },
+    fallbacks=[],
+    allow_reentry=True
+)
 
-    # Add the quality selection handler to the updater
-    updater.dispatcher.add_handler(CommandHandler("start", start))
-    updater.dispatcher.add_handler(quality_selection_handler)
-    updater.dispatcher.add_handler(InlineQueryHandler(inline_quality_selection))
+# Add the quality selection handler to the updater
+updater.dispatcher.add_handler(CommandHandler("start", start))
+updater.dispatcher.add_handler(quality_selection_handler)
+updater.dispatcher.add_handler(InlineQueryHandler(inline_quality_selection))
 
-    # Start the bot
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == "__main__":
-    main()
+# Start the bot
+updater.start_polling()
+updater.idle()
