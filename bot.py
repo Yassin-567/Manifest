@@ -4,7 +4,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Conve
 import yt_dlp
 
 # Replace this with your bot's token
-bot_token = "6266356161:AAEd7RPG1NnYlYr6rDikURVDzZGHtyozeA8"
+bot_token = "5987250865:AAHjt2KwXxLXg-szVMmfnfWdG6UA1hcgmwI"
 
 # Define the states used in the conversation flow
 QUALITY_SELECTION, GET_VIDEO_URL = range(2)
