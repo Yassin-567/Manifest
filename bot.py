@@ -19,7 +19,7 @@ def start(update: telegram.Update, context: CallbackContext):
     # Create a reply markup with the custom keyboard
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
     # Send the message with the custom keyboard
-    update.message.reply_text("Hello there🙋‍♂️\nSend me any YouTube video link🔗, and wait for the magic to happen🔮...\n\nYou can also use the following commands:", reply_markup=reply_markup)
+    update.message.reply_text("Hello there🙋‍♂️\nSend me any YouTube video link🔗, and wait for the magic to happen🔮...", reply_markup=reply_markup)
 
 def get_dash_manifest_url_from_youtube(video_url):
     try:
