@@ -1,6 +1,6 @@
 import telegram
+from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
-import yt_dlp
 
 # Replace this with your bot's token
 bot_token = "5987250865:AAHjt2KwXxLXg-szVMmfnfWdG6UA1hcgmwI"
@@ -8,52 +8,33 @@ bot_token = "5987250865:AAHjt2KwXxLXg-szVMmfnfWdG6UA1hcgmwI"
 # Define the states used in the conversation flow
 QUALITY_SELECTION = 0
 
+def start(update, context):
+    """Handler function for the /start command"""
+    # Define the custom keyboard
+    keyboard = [
+        [telegram.KeyboardButton('/start')],
+        [telegram.KeyboardButton('/help')]
+    ]
+    # Create a reply markup with the custom keyboard
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+    # Send the message with the custom keyboard
+    update.message.reply_text("Hello there🙋‍♂️\nSend me any YouTube video link🔗, and wait for the magic to happen🔮...\n\nYou can also use the following commands:", reply_markup=reply_markup)
+
 def get_dash_manifest_url(update, context):
-    # Get the YouTube live stream URL from the message sent to the bot
-    live_stream_url = update.message.text
+    """Handler function for the /dash_manifest_url command"""
 
-    # Create a `yt_dlp` instance and set the options to extract the formats
-    ydl_opts = {
-        "format": "best",
-        "forcejson": True,
-        "simulate": True,
-        "quiet": True,
-        "no_warnings": True,
-        "extract_flat": True
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(live_stream_url, download=False)
-        formats = info_dict.get("formats")
+    # Get the YouTube video link from the user
+    video_url = update.message.text
 
-    # Prompt the user to select a quality level
-    quality_levels = [f"{format['height']}p" for format in formats if format.get('height')]
-    prompt = "Select a quality level:\n\n" + "\n".join([f"{i+1}. {level}" for i, level in enumerate(quality_levels)])
-    update.message.reply_text(prompt)
+    # Get the dash manifest URL for the video
+    dash_manifest_url = get_dash_manifest_url_from_youtube(video_url)
 
-    # Define a function to handle the user's response
-    def handle_quality_selection(update, context):
-        # Get the user's selected quality level
-        selected_index = int(update.message.text) - 1
-        selected_format = formats[selected_index]
+    # Send the dash manifest URL to the user
+    update.message.reply_text(dash_manifest_url)
 
-        # Extract the dash manifest URL for the selected format
-        ydl_opts["format"] = selected_format["format_id"]
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(live_stream_url, download=False)
-            dash_manifest_url = info_dict.get("url")
-
-        # Send the dash manifest URL back to the user
-        update.message.reply_text(f"Dash manifest URL ({selected_format['height']}p): {dash_manifest_url}")
-
-        # End the conversation
-        return ConversationHandler.END
-
-    # Add a message handler to listen for the user's response
-    selection_handler = MessageHandler(Filters.regex(r"^[1-9][0-9]*$"), handle_quality_selection)
-    context.dispatcher.add_handler(selection_handler)
-
-    # Return to the main event loop and wait for the user's response
-    return ConversationHandler.END
+def help(update, context):
+    """Handler function for the /help command"""
+    update.message.reply_text("This is how to use, its super easy😎\n\n1. Send a YouTube video link🔗\n2. Choose your manifest URL desired quality🔢\n3. Use the manifest URL to play the video directly on your TV📺")
 
 def main():
     # Create an instance of the Telegram bot
@@ -62,11 +43,17 @@ def main():
     # Create an instance of the Telegram updater and attach the bot to it
     updater = Updater(token=bot_token, use_context=True)
 
+    # Add a command handler to handle the /start command
+    updater.dispatcher.add_handler(CommandHandler("start", start))
+
+    # Add a command handler to handle the /help command
+    updater.dispatcher.add_handler(CommandHandler("help", help))
+
     # Create a conversation handler to handle the quality selection flow
     quality_selection_handler = ConversationHandler(
         entry_points=[MessageHandler(Filters.regex(r"(http(s)?://)?((w){3}.)?youtu(be|.be)?(\.com)?/.+"), get_dash_manifest_url)],
         states={
-            QUALITY_SELECTION: [MessageHandler(Filters.regex(r"^[1-9][0-9]*$"), get_dash_manifest_url)]
+            QUALITY_SELECTION: [MessageHandler(Filters.regex(r"^\/[1-9][0-9]*p$"), get_dash_manifest_url)]
         },
         fallbacks=[],
         allow_reentry=True
